@@ -22,11 +22,39 @@ using System.Collections.Generic;
 
 public class BuildTools {
 	[SerializeField]
-	static string projectName ="GameBuild";
+	static string projectName ="Starmark";
 
+
+	public static string GetArgument(string option)
+	{
+		string[] args = Environment.GetCommandLineArgs();
+		
+		for(int i = 0 ; i < args.Length ; i++)
+		{
+			if(args[i].Equals(option))
+			{
+				if(i+1 < args.Length)
+					return args[i+1];
+				else
+					return "";
+			}
+		}
+		return "";
+	}
 	//Build variations, these are simple and can be expaded upon easily. :: Build(Target build platform, directory to deposite, compress if true);
 	public static void BuildWeb() {
-		Build(BuildTarget.WebPlayer, @"Builds/"+projectName+"(Web)", true);
+		Build(BuildTarget.WebPlayer, @"Builds/"+projectName+"(Web)", false);
+	}
+	
+	public static void CmdBuildWeb()
+	{
+		LogFile log = new LogFile(@"Builds/buildarg.log", false);
+		
+		string buildNumber = GetArgument("-buildNumber");
+		log.Message("buildNumber:"+buildNumber);
+		log.Close();
+		Build(BuildTarget.WebPlayer, @"Builds/"+ buildNumber +"/"+projectName+"(Web)", false);
+		
 	}
 
 	public static void BuildPC() {
@@ -73,6 +101,17 @@ public class BuildTools {
  
         string pattern = @"^(\s*iPhoneBundleVersion:\s*)([\d\.]+)$";
         bool success = false;
+        
+        //string bundleVersion = PlayerSettings.bundleVersion;
+		//string bundleIdentifier = PlayerSettings.bundleVersion;
+		
+//		LogFile logBundle = new LogFile(@"Builds/bundlelog.log",false);
+//		logBundle.Message(bundleVersion);
+//		logBundle.Message(bundleIdentifier);
+//		logBundle.Close();
+//		Debug.Log("bundleVersion:"+bundleVersion);
+//		Debug.Log("bundleIdentifier:"+bundleIdentifier);
+		
  
         System.Version version = null;
         for (int i=0; i<lines.Length; i++) {
