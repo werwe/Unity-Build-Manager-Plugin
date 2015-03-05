@@ -53,7 +53,7 @@ public class BuildTools {
 		string buildNumber = GetArgument("-buildNumber");
 		log.Message("buildNumber:"+buildNumber);
 		log.Close();
-		Build(BuildTarget.WebPlayer, @"Builds/"+ buildNumber +"/"+projectName+"(Web)", false);
+		BuildForJenkins(BuildTarget.WebPlayer, @"Builds/"+ buildNumber +"/"+projectName+"(Web)", false);
 		
 	}
 
@@ -236,6 +236,97 @@ public class BuildTools {
 		return ( scenes );
 	}
 
+
+	public static void BuildForJenkins(BuildTarget target, string output, bool compress) {
+		//This helps with getting the version number base to start from
+		var settingsPath = Path.GetDirectoryName(Application.dataPath);
+		settingsPath = Path.Combine(settingsPath, "ProjectSettings");
+		settingsPath = Path.Combine(settingsPath, "ProjectSettings.asset");
+		//Throw error if we can't find anything
+		if (!File.Exists(settingsPath)) {
+			Debug.LogError("Couldn't find project settings file.");
+			return;
+		}
+		
+		// Make sure the paths exist before building.
+		try{
+			Directory.CreateDirectory( output );
+		}
+		catch{
+			Debug.LogError("Failed to create directories: " + output );
+		}
+
+		
+		//Lets start writing the files to the log and such
+		LogFile log = new LogFile(@"Builds/log.log", false);
+		log.Message("-----BUILD-----");
+		log.Message( "Building Platform: " + target.ToString() );
+		
+		//These are to speed things up a little bit.
+		string projectNameFile = null;
+		string locationPathName = null;;
+		if(target.ToString() == "WebPlayer") {
+			locationPathName = output;
+		} else if(target.ToString() == "StandaloneWindows") {
+			projectNameFile = projectName+".exe";
+			locationPathName = output +"/"+ projectNameFile;
+		} else if(target.ToString() == "StandaloneOSXUniversal") {
+			projectNameFile = projectName+".app";
+			locationPathName = output +"/"+ projectNameFile;
+		} else if(target.ToString() == "Android") {
+			projectNameFile = projectName+".apk";
+			locationPathName = output +"/"+ projectNameFile;
+		}
+		string[] level_list = FindScenes();
+		log.Message("Scenes to be processed: " + level_list.Length );
+		
+		foreach( string s in level_list)
+		{
+			string cutdown_level_name = s.Remove( s.IndexOf(".unity") );
+			log.Message("   " + cutdown_level_name );
+		}
+		
+		string results = BuildPipeline.BuildPlayer( level_list, locationPathName, target, BuildOptions.None );
+		if ( results.Length == 0 )
+			log.Message("No Build Errors" );
+		else
+			log.Message("Build Error:" + results);
+		
+		//This is where we decide if we want to zip the files, make sure Ionic.Zip is included to reference this.
+		//This could be cleaned up by moving everything to a temp directory, compressing, and then moving to the proper directory - but I'm too lazy at this point so I'll do that later.
+//		if(compress == true) {
+//			//For some reason Windows needs a file and a directory, so here's a silly hardcode to deal with it.
+//			if(target.ToString() == "StandaloneWindows") {
+//				using (ZipFile zip = new ZipFile()) {
+//					// add this file into the project directory in the zip archive
+//					zip.AddFile(output+"/"+projectNameFile, "");
+//					zip.AddDirectory(output+"/"+projectName+"_Data", projectName+"_Data");
+//					// add the file into a different directory in the archive
+//					zip.Save(output+"/"+projectName+".zip");
+//				}
+//				//Web apps is shoved into a folder already, we'll just compress it.
+//			} else if(target.ToString() == "WebPlayer") {
+//				using (ZipFile zip = new ZipFile()) {
+//					// add this directory in the zip archive
+//					zip.AddDirectory(output+"/"+projectName, "");
+//					// add the file into a different directory in the archive
+//					zip.Save(output+"/"+projectName+".zip");
+//				}
+//			} else {
+//				using (ZipFile zip = new ZipFile()) {
+//					// add this directory in the zip archive
+//					zip.AddDirectory(output+"/"+projectNameFile, "");
+//					// add the file into a different directory in the archive
+//					zip.Save(output+"/"+projectName+".zip");
+//				}
+//			}
+//			log.Message("Compressed:"+output+"/"+projectName+".zip");
+//		}
+//		
+		log.Message( "");
+		log.Close();
+		
+	}
 }
 
 #endif
